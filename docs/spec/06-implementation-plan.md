@@ -29,7 +29,8 @@
 - [x] End-to-end smoke test against a real Jellyfin 12.4 server (`npm run e2e`)
 - [x] `npm run lint && npm run build`
 - [x] `docs/04-review.md`
-- [ ] Vercel staging deploy + smoke test (`docs/05-deploy.md`)
+- [x] `staging` branch pushed
+- [ ] Vercel staging deploy + smoke test — **blocked**: Vercel 403 on project create (`docs/05-deploy.md`)
 
 ## Phase 6 — Gate 2 (stop)
 - [ ] User picks a twist from `docs/03-twist.md`
