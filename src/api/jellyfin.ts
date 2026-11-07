@@ -104,7 +104,6 @@ interface ReqOpts {
   query?: Query
   body?: unknown
   keepalive?: boolean
-  signal?: AbortSignal
 }
 
 /** Ask for PascalCase JSON explicitly; the types in ./types.ts use PascalCase. */
@@ -124,10 +123,8 @@ async function request<T>(conn: Conn, path: string, opts: ReqOpts = {}): Promise
       headers,
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
       keepalive: opts.keepalive,
-      signal: opts.signal,
     })
-  } catch (e) {
-    if ((e as Error).name === 'AbortError') throw e
+  } catch {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       throw new ApiError("You're offline. Reconnect to the internet and try again.", 'network')
     }
@@ -233,9 +230,8 @@ export function getChildren(c: Conn, parent: BaseItem, startIndex = 0) {
   })
 }
 
-export const search = (c: Conn, term: string, signal?: AbortSignal) =>
+export const search = (c: Conn, term: string) =>
   request<ItemsResult>(c, '/Items', {
-    signal,
     query: {
       userId: c.userId,
       searchTerm: term,
