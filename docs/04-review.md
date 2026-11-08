@@ -36,3 +36,30 @@
 - [x] No secrets in client code (only the user's own token in IndexedDB). No `console` logging.
 - [x] Accessibility: visible 3px focus ring, labels on all inputs, `role="alert"` errors, skip link, 44px targets.
 - [x] Error states for the top risks: mixed content, CORS/unreachable, wrong password, expired token (auto sign-out), unplayable format.
+
+---
+
+# Session 2 — Twist build review
+
+**Date:** 2026-11-08. **Result:** no open high-severity items.
+
+## Checks run
+| Check | Result |
+|---|---|
+| `npm run lint` / `npm run typecheck` / `npm run build` | Pass (0 warnings) |
+| `npm test` (Vitest) | **34 pass** (12 from Session 1 + 22 new: spatial navigation, TV detection, quality profile, Tonight list, saved accounts) |
+| `npm run e2e` against real **Jellyfin 12.4.0** (Docker), Chromium | **29/29 pass** — all 15 Session 1 checks, plus: converted playback, mini player keeps playing on other pages, expand without restart, 480p → smaller converted stream (`MaxHeight=480`, `VideoBitrate≈1.4 Mbps`), Back closes the player, couch arrow keys + row memory, Back restores focus to the opened card, Tonight order, Play next, Up next, finished item leaves the shelf, add a second account, Who's watching? switch, TV signed in with a code approved from another browser, remove a saved account |
+| Session 1 user (old `session` key only) opens the new version | Still signed in (migrated into `accounts`) |
+| Phone (iPhone 13): connect, home, item, player, home + mini player, your account, Who's watching? | No sideways scroll |
+
+## Findings
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| 1 | **High** | On phones the empty (hidden) mini player still covered the bottom of the page and swallowed taps: the phone layout's `display: flex` beat the `[hidden]` rule | **Fixed**: `[hidden]` forced with `!important`; e2e/phone check clicks through it |
+| 2 | Medium | Leaving the player while "Up next" swapped videos could stop the new video (route-vs-item race) | **Fixed**: only a route change *away from* `/play/…` stops playback; `/play/a → /play/b` doesn't |
+| 3 | Medium | Code screen restarted its polling on every re-render (new callback each time) | **Fixed**: latest callback kept in a ref |
+| 4 | Low | React's `autoFocus` does nothing on links, so "▶ Play" was never focused (also true in Session 1) | **Fixed for couch mode**: a new page focuses its main button (`.btn.primary`) or first card |
+| 5 | Low | Player bar wrapped onto three rows on phones; mini player covered half the screen | **Fixed**: short labels ("Mini", "PiP"); phone mini player is a slim strip |
+| 6 | Low | Anyone using the device can switch to a saved account | **Accepted**: same as staying signed in; Remove/Sign out revokes the token on the server. PIN is a later option |
+| 7 | Low | Tonight lives on one device only | **By design** (no backend); noted in schema "revisit when" |
+| 8 | Info | Picture-in-picture isn't available in every browser (e.g. Firefox's own PiP is separate) | The button only shows when `document.pictureInPictureEnabled`; the mini player works everywhere |
