@@ -32,8 +32,19 @@
 - [x] `staging` branch pushed
 - [ ] Vercel staging deploy + smoke test — **blocked**: Vercel 403 on project create (`docs/05-deploy.md`)
 
-## Phase 6 — Gate 2 (stop)
-- [ ] User picks a twist from `docs/03-twist.md`
+## Phase 6 — Gate 2
+- [x] User picked **all three** twists, then added saved accounts + code sign-in
+
+## Phase 7 — Twist build (Session 2)
+- [x] `src/playback/engine.ts`: Session 1 player logic moved out of the page
+- [x] `PlaybackProvider`: one `<video>` above the routes; full ↔ mini without restart; browser PiP; stop on route leave unless minimized
+- [x] Couch mode: `spatial.ts` scoring, `CouchNav` (arrows, row memory, page memory), TV auto-detect, 10-foot CSS
+- [x] Quality menu: bitrate + `Height` profile rule, saved per server, restart at the same second
+- [x] Tonight: list helpers, per-user storage, `/Items?ids=` refresh, Play next, Up next countdown, auto-remove on finish
+- [x] Saved accounts: `accounts` list + migration, Who's watching?, Your account page, server-side logout
+- [x] Quick Connect: code screen + polling on `/connect`, approve form on `/me`
+- [x] Unit tests (34) and e2e (29 checks) against Jellyfin 12.4.0
+- [x] Docs: twist decision + delta from reference, TRD/flow/brief/schema, review
 
 ## Later phases (not this session)
-Twist build → production (Gate 3) → Plex/Emby → offline downloads → supporter themes.
+Staging deploy (still blocked, see `05-deploy.md`) → production (Gate 3) → Plex/Emby → offline downloads → supporter themes.

@@ -24,7 +24,8 @@ No secrets: the app has no server keys. Users' Jellyfin tokens stay on their own
 ## Smoke test to run on the staging URL
 `APP_URL=<staging url> JF_URL=<an https Jellyfin> JF_USER=… JF_PASS=… npm run e2e` — loads, manifest valid,
 service worker registers, log in, browse, search, play, resume, offline shell.
-(The same 15 checks already pass locally against Jellyfin 12.4; see `04-review.md`.)
+(The same checks, 29 since Session 2, already pass locally against Jellyfin 12.4; see `04-review.md`.
+Add `TRANSCODE_MOVIE` and `SHORT_MOVIE` for the conversion and "Up next" checks; the account checks need `JF_USER` to be an admin.)
 
 Note: Vercel's default Deployment Protection puts a login in front of preview URLs. Keep it on for staging,
 or turn it off for that URL if someone without a Vercel account needs to test.

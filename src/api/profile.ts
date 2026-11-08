@@ -10,7 +10,15 @@ export function browserCanPlay(): CanPlay {
     (typeof MediaSource !== 'undefined' && MediaSource.isTypeSupported(mime))
 }
 
-export function buildDeviceProfile(can: CanPlay) {
+export interface ProfileLimits {
+  /** Bits per second. Default 120 Mbps ("Original"). */
+  maxBitrate?: number
+  /** Tallest picture allowed. When set, bigger videos are converted down to this height. */
+  maxHeight?: number
+}
+
+export function buildDeviceProfile(can: CanPlay, limits: ProfileLimits = {}) {
+  const maxBitrate = limits.maxBitrate ?? 120_000_000
   const mp4Video: string[] = []
   if (can('video/mp4; codecs="avc1.42E01E"')) mp4Video.push('h264')
   if (can('video/mp4; codecs="hvc1.1.6.L93.B0"')) mp4Video.push('hevc')
@@ -37,8 +45,8 @@ export function buildDeviceProfile(can: CanPlay) {
 
   return {
     Name: 'Hearthreel',
-    MaxStreamingBitrate: 120_000_000,
-    MaxStaticBitrate: 120_000_000,
+    MaxStreamingBitrate: maxBitrate,
+    MaxStaticBitrate: maxBitrate,
     DirectPlayProfiles: direct,
     TranscodingProfiles: [
       {
@@ -54,7 +62,17 @@ export function buildDeviceProfile(can: CanPlay) {
       },
     ],
     ContainerProfiles: [],
-    CodecProfiles: [],
+    // A Height rule makes the server refuse direct play for taller videos and size the conversion to fit.
+    CodecProfiles: limits.maxHeight
+      ? [
+          {
+            Type: 'Video',
+            Conditions: [
+              { Condition: 'LessThanEqual', Property: 'Height', Value: String(limits.maxHeight), IsRequired: false },
+            ],
+          },
+        ]
+      : [],
     SubtitleProfiles: [],
   }
 }
