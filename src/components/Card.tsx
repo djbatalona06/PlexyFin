@@ -10,7 +10,7 @@ export function Card({ item }: { item: BaseItem }) {
   const pct = item.UserData?.PlayedPercentage
   const sub = subtitleFor(item)
   return (
-    <Link to={hrefFor(item)} className="card">
+    <Link to={hrefFor(item)} className="card" data-nav-id={item.Id}>
       <div className="poster">
         {img ? <img src={img} alt="" loading="lazy" decoding="async" /> : <span aria-hidden="true">{item.Name.charAt(0)}</span>}
         {pct ? (
@@ -27,7 +27,7 @@ export function Card({ item }: { item: BaseItem }) {
 
 export function Grid({ items }: { items: BaseItem[] }) {
   return (
-    <ul className="grid">
+    <ul className="grid" data-nav-row>
       {items.map((i) => (
         <li key={i.Id}>
           <Card item={i} />

@@ -22,6 +22,20 @@
 - Empty, loading and error states for every list.
 - Works from 320px phone width up to a TV.
 
+## Couch mode (10-foot)
+- Root font 125%, gap 24px, page padding `3vh 5vw` (inside TV overscan), cards `minmax(200px, 1fr)`, buttons/inputs ≥ 56px.
+- Focus: 5px ember ring; focused cards/library tiles scale to 1.06 (no scaling with `prefers-reduced-motion`).
+- Mini player is larger (`min(480px, 40vw)`) and sits inside the overscan margin.
+
+## Player
+- Full screen: top bar with Back, title, a pill ("Direct" / "Converted · 720p"), Quality menu, Mini player, Picture-in-picture. On phones the buttons read "Mini" / "PiP".
+- Mini player: corner card with the video and ▶/❚❚, ⤢, ✕. On phones it is a slim strip (small video left, buttons right). Pages get bottom padding so it never covers the last row.
+- "Up next" toast: bottom-right, ember left border, Play now / Cancel, live countdown.
+
+## Accounts
+- Round avatar with the first letter (ember on charcoal; filled ember on hover/focus). Header shows a small avatar + name (name hidden on phones).
+- Sign-in code: six large digit boxes, numbered steps underneath, "Waiting for approval…".
+
 ## Brand
 - Name: **Hearthreel**. Icon: an original ember/flame shape inside a rounded square (SVG in `public/icon.svg`). No reference-app assets.
 - Voice: short, friendly, plain words. "Pick up where you left off", not "Resume playback session".

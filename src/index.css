@@ -110,20 +110,126 @@ code { background: var(--surface-2); padding: 1px 5px; border-radius: 5px; font-
 @media (max-width: 640px) {
   .item { grid-template-columns: 1fr; }
   .item-poster { max-width: 220px; }
-  .who .muted { display: none; }
+  .me-name { display: none; }
   .search { order: 3; flex-basis: 100%; max-width: none; }
 }
 
-/* Player */
-.player { position: fixed; inset: 0; background: #000; }
-.video { width: 100%; height: 100%; }
+/* Accounts: "Who's watching?", the header avatar and "Your account" */
+.avatar {
+  display: inline-grid; place-items: center; width: 96px; height: 96px; border-radius: 50%;
+  background: var(--surface-2); color: var(--accent); font-size: 2.6rem; font-weight: 700; line-height: 1;
+}
+.avatar.small { width: 30px; height: 30px; font-size: 0.95rem; }
+.avatar.big { width: 72px; height: 72px; font-size: 2rem; flex: none; }
+.me-link { gap: 8px; padding: 0 10px; }
+.accounts { text-align: center; padding-top: 48px; }
+.accounts > img { margin: 0 auto; }
+.accounts h1 { font-size: 2rem; margin: 12px 0 28px; }
+.account-grid {
+  list-style: none; padding: 0; margin: 0 auto 24px; max-width: 900px;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: var(--gap);
+}
+.account-grid li { display: grid; gap: 6px; justify-items: center; }
+.account {
+  display: grid; justify-items: center; gap: 6px; width: 160px; padding: 16px 8px; border: 0; border-radius: var(--radius);
+  background: transparent; color: var(--text); font: inherit; text-decoration: none; cursor: pointer;
+}
+.account:hover .avatar, .account:focus-visible .avatar { background: var(--accent); color: var(--accent-ink); }
+.account:disabled { cursor: default; opacity: 0.7; }
+.account-name { font-weight: 700; font-size: 1.05rem; }
+.btn.danger { color: var(--danger); }
+.me-head { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+.me-head h1 { margin: 0; }
+.me-head p { margin: 0; }
+.panel { background: var(--surface); border-radius: var(--radius); padding: 4px 16px 16px; margin-top: 24px; max-width: 640px; }
+.code-form { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin-bottom: 12px; }
+.code-form label { display: grid; gap: 6px; font-weight: 600; flex: 1 1 200px; }
+.code-form input { font-size: 1.4rem; letter-spacing: 0.3em; }
+
+/* Connect screen extras + "Sign in with a code" */
+.connect-back { text-align: left; margin: -32px 0 8px; }
+.center { text-align: center; margin: 0; }
+.qc h1 { margin-bottom: 20px; }
+.qc-code { display: flex; justify-content: center; gap: 8px; margin: 0 0 20px; }
+.qc-code span {
+  display: grid; place-items: center; width: 2.4em; height: 3em; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--surface-2); font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.qc-steps { text-align: left; background: var(--surface); border-radius: var(--radius); padding: 12px 16px 12px 36px; }
+.qc-steps li { margin: 6px 0; }
+.qc .actions { justify-content: center; }
+
+/* Player: one <video> that is either full screen or a mini-player in the corner (never re-created) */
+.player-shell[hidden] { display: none !important; } /* must beat the layouts below, or an empty player blocks taps */
+.player-shell.full { position: fixed; inset: 0; z-index: 30; background: #000; }
+.player-shell.mini {
+  position: fixed; right: 16px; bottom: 16px; z-index: 30; width: min(360px, calc(100vw - 32px));
+  background: #000; border-radius: var(--radius); overflow: hidden; box-shadow: 0 8px 32px rgb(0 0 0 / 0.6);
+  border: 1px solid var(--surface-2);
+}
+.video { display: block; width: 100%; height: 100%; }
+.player-shell.mini .video { height: auto; aspect-ratio: 16 / 9; cursor: pointer; }
+:root[data-mini] #main { padding-bottom: 260px; }
 .player-bar {
-  position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  position: absolute; top: 0; left: 0; right: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px;
   background: linear-gradient(rgb(0 0 0 / 0.7), transparent); pointer-events: none;
 }
-.player-bar .btn { pointer-events: auto; }
-.player-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-bar .btn, .player-bar select { pointer-events: auto; }
+.player-title { flex: 1 1 120px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pill { font-size: 0.8rem; padding: 2px 8px; border-radius: 999px; background: rgb(255 255 255 / 0.12); white-space: nowrap; }
+select.quality {
+  min-height: 44px; padding: 0 10px; border: 1px solid var(--surface-2); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); font: inherit;
+}
+.mini-bar { display: flex; align-items: center; gap: 2px; padding: 4px 4px 4px 12px; background: var(--surface); }
+.mini-bar .btn { min-width: 44px; padding: 0 10px; }
+.mini-title { flex: 1; min-width: 0; font-size: 0.9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .player-overlay {
   position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 8px;
   padding: 24px; text-align: center; background: rgb(0 0 0 / 0.75);
+}
+.player-shell.mini .player-overlay { padding: 8px; font-size: 0.85rem; }
+.up-next {
+  position: absolute; right: 16px; bottom: 72px; max-width: min(420px, calc(100% - 32px)); padding: 12px 16px;
+  background: rgb(29 26 28 / 0.95); border-radius: var(--radius); border-left: 3px solid var(--accent);
+}
+.up-next p { margin: 0; }
+.up-next .actions { margin: 10px 0 0; }
+.player-shell.mini .up-next { left: 8px; right: 8px; bottom: 56px; padding: 8px 10px; font-size: 0.85rem; }
+
+/* Tonight row: heading with the big "Play next" button beside it */
+.row-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 28px 0 12px; }
+.row-head h2 { margin: 0; }
+
+/* Couch mode: 10-foot layout for TVs, consoles and laptops on HDMI */
+.couch-toggle[aria-pressed='true'] { color: var(--accent); }
+:root[data-couch] { font-size: 125%; --gap: 24px; }
+:root[data-couch] .header { padding: 12px 5vw; }
+:root[data-couch] .page { max-width: none; padding: 3vh 5vw 5vh; } /* stays inside TV overscan */
+:root[data-couch] .grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+:root[data-couch] .libs { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+:root[data-couch] .btn, :root[data-couch] input, :root[data-couch] select.quality { min-height: 56px; }
+:root[data-couch] :focus-visible { outline-width: 5px; outline-offset: 4px; }
+:root[data-couch] .card, :root[data-couch] .lib { transition: transform 0.15s ease; }
+:root[data-couch] .account { width: 200px; }
+:root[data-couch] .avatar:not(.small) { width: 128px; height: 128px; font-size: 3.4rem; }
+:root[data-couch] .card:focus-visible, :root[data-couch] .lib:focus-visible { transform: scale(1.06); position: relative; z-index: 1; }
+:root[data-couch] .player-shell.mini { width: min(480px, 40vw); right: 5vw; bottom: 5vh; }
+:root[data-couch][data-mini] #main { padding-bottom: 360px; }
+@media (prefers-reduced-motion: reduce) {
+  :root[data-couch] .card, :root[data-couch] .lib { transition: none; }
+  :root[data-couch] .card:focus-visible, :root[data-couch] .lib:focus-visible { transform: none; }
+}
+.short { display: none; }
+@media (max-width: 640px) {
+  .couch-toggle { display: none; }
+  .long { display: none; }
+  .short { display: inline; }
+  .player-bar { gap: 4px; padding: 6px 8px; }
+  .player-bar .btn { padding: 0 10px; }
+  /* Phones: a slim strip (small video on the left, buttons on the right) instead of a big box */
+  .player-shell.mini { right: 8px; bottom: 8px; width: calc(100vw - 16px); display: flex; align-items: stretch; }
+  .player-shell.mini .video { width: 40%; flex: none; }
+  .player-shell.mini .mini-bar { flex: 1; min-width: 0; padding-left: 10px; }
+  :root[data-mini] #main { padding-bottom: 120px; }
 }

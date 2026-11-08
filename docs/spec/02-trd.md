@@ -29,6 +29,12 @@ Checked against the Jellyfin server source (`master`, Nov 2026).
 | Transcode (HLS) | `TranscodingUrl` returned by PlaybackInfo |
 | Report progress | `POST /Sessions/Playing`, `/Sessions/Playing/Progress`, `/Sessions/Playing/Stopped` |
 | Stop transcode | `DELETE /Videos/ActiveEncodings?deviceId=&playSessionId=` |
+| Tonight refresh | `GET /Items?userId=&ids=a,b,c` (fresh progress for saved items) |
+| Sign out (revoke token) | `POST /Sessions/Logout` |
+| Code sign-in (TV side) | `GET /QuickConnect/Enabled` → `POST /QuickConnect/Initiate` (`Code`, `Secret`) → poll `GET /QuickConnect/Connect?secret=` until `Authenticated` → `POST /Users/AuthenticateWithQuickConnect` body `{Secret}` |
+| Code sign-in (phone side) | `POST /QuickConnect/Authorize?code=&userId=` — the TV is signed in as this user |
+
+All Session 2 calls were checked against a live Jellyfin 12.4.0: Quick Connect is on by default; two users signed in from the same `DeviceId` both keep valid tokens; `/Sessions/Logout` revokes only the caller's token.
 
 **Auth header:** `Authorization: MediaBrowser Client="Hearthreel", Device="<browser>", DeviceId="<uuid>", Version="<ver>", Token="<token>"`.
 We do **not** use `X-Emby-Authorization`, `X-Emby-Token` or `api_key`: the server only accepts those when `EnableLegacyAuthorization` is on, and it defaults to `false`. For media URLs (which can't carry headers) we use the `ApiKey` query parameter.
@@ -41,17 +47,25 @@ We do **not** use `X-Emby-Authorization`, `X-Emby-Token` or `api_key`: the serve
 
 Time unit: Jellyfin "ticks" = 1/10,000,000 s. `seconds = ticks / 1e7`.
 
+## Session 2 design notes
+- **One `<video>` for the whole app.** `PlaybackProvider` sits above `<Routes>` and owns the only `<video>`. `/play/:id` (`PlayRoute`) just asks it to play and fill the screen. Mini/full is a CSS class change, so the element (and the stream) is never re-created. Leaving `/play/...` by any route change stops playback *unless* "Mini player" was pressed first. `engine.ts` is Session 1's player logic moved out of the page unchanged.
+- **Quality.** `buildDeviceProfile(can, { maxBitrate, maxHeight })` sets `MaxStreamingBitrate`/`MaxStaticBitrate` and, below Original, adds `CodecProfiles: [{ Type: 'Video', Conditions: [{ Condition: 'LessThanEqual', Property: 'Height', Value }] }]`. Jellyfin then refuses direct play for taller files and sizes the conversion itself (it puts `MaxHeight` in the HLS URL).
+- **Couch navigation** (`src/couch/spatial.ts`): candidates in the arrow's direction are scored by edge gap + 2 × sideways offset; items sharing the row/column drop the sideways cost, so Right walks along a row. Rows are `[data-nav-row]` containers; cards carry `data-nav-id` for "back to the card you opened".
+- **Accounts.** `accounts` (list) + `session` (in use) in IndexedDB. With 2+ accounts a new tab asks "Who's watching?"; a reload of the same tab doesn't (`sessionStorage` flag). Switching accounts stops playback; Tonight and quality are already per server/user.
+
 ## Parity map (reference feature → web decision)
 | Reference feature | Decision | Reason |
 |---|---|---|
 | Browse libraries, search | KEEP | Core of session 1 |
 | Direct play / HLS playback | ADAPT | Only codecs the browser can decode; server transcodes the rest to H.264/AAC HLS |
 | Resume + watch progress | KEEP | Reported back to the server via Sessions API |
-| Picture-in-Picture | ADAPT (twist) | Browser PiP API; keep playing across navigation is the differentiator |
+| Picture-in-Picture | **BUILT** (twist) | Browser PiP API + our own corner mini-player; playback survives page changes |
+| TV / remote layout | **BUILT** (twist) | Couch mode: spatial arrow navigation, focus memory, 10-foot sizes |
+| Resolution choice | **BUILT** (twist) | Quality menu: bitrate cap + `Height` codec-profile rule |
+| Multi-profile, Quick Connect | **BUILT** (Session 2) | Saved accounts + code sign-in |
 | Offline downloads | DROP for now | Needs service worker + Cache/OPFS + storage quotas; later |
 | HDR / Dolby Vision / audio passthrough | DROP | Not reliably possible in browsers |
 | Live TV / DVR | DROP for now | Later phase |
-| Multi-profile, Quick Connect | DROP for now | Later phase |
 | Themes (paid "Supporter") | LATER | Candidate monetization |
 | Plex, Emby | LATER | Jellyfin first: open API, no account wall |
 
@@ -70,6 +84,8 @@ Time unit: Jellyfin "ticks" = 1/10,000,000 s. `seconds = ticks / 1e7`.
 - No secrets in the repo. The only secret is the user's Jellyfin token, stored in IndexedDB on their device.
 - The password is sent once to the user's own server and never stored.
 - No analytics, no third-party calls.
+- Saved accounts keep one token per account in IndexedDB on that device (never passwords). Anyone who can use the device can switch to a saved account, the same as staying signed in. "Sign out" and "Remove" revoke the token on the server (`/Sessions/Logout`) and delete it locally. A per-account PIN is not built (later, if asked).
+- Quick Connect codes are approved only by an already signed-in user, and expire on the server (Jellyfin default ~10 minutes).
 
 ## Environment variables
 | Name | Where | Purpose |

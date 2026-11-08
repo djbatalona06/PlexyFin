@@ -163,6 +163,17 @@ export async function probeServer(conn: Conn): Promise<PublicSystemInfo> {
   return info
 }
 
+function toSession(serverUrl: string, info: PublicSystemInfo, auth: AuthResult): Session {
+  return {
+    serverUrl,
+    serverName: info.ServerName,
+    serverId: auth.ServerId || info.Id,
+    userId: auth.User.Id,
+    userName: auth.User.Name,
+    token: auth.AccessToken,
+  }
+}
+
 export async function login(
   serverUrl: string,
   deviceId: string,
@@ -176,17 +187,58 @@ export async function login(
       method: 'POST',
       body: { Username: username, Pw: password },
     })
-    return {
-      serverUrl,
-      serverName: info.ServerName,
-      serverId: auth.ServerId || info.Id,
-      userId: auth.User.Id,
-      userName: auth.User.Name,
-      token: auth.AccessToken,
-    }
+    return toSession(serverUrl, info, auth)
   } catch (e) {
     if (e instanceof ApiError && (e.kind === 'auth' || e.status === 400)) {
       throw new ApiError('Wrong username or password.', 'login', e.status)
+    }
+    throw e
+  }
+}
+
+/** Ends this sign-in on the server (the token stops working). Best effort: callers ignore failures. */
+export const logout = (c: Conn) => request<void>(c, '/Sessions/Logout', { method: 'POST', keepalive: true })
+
+// ---------- Quick Connect: sign in with a 6-digit code approved from another device ----------
+
+export interface QuickConnectStart {
+  Secret: string
+  Code: string
+}
+
+/** Step 1 (on the TV): get a code to show. Throws a friendly error if the server has it turned off. */
+export async function quickConnectStart(serverUrl: string, deviceId: string): Promise<QuickConnectStart> {
+  const conn: Conn = { serverUrl, deviceId }
+  await probeServer(conn)
+  const enabled = await request<boolean>(conn, '/QuickConnect/Enabled')
+  if (!enabled) {
+    throw new ApiError('Sign-in codes are turned off on this server. An admin can turn on Quick Connect in Dashboard → General.', 'login')
+  }
+  return request<QuickConnectStart>(conn, '/QuickConnect/Initiate', { method: 'POST' })
+}
+
+/** Step 2 (on the TV): has someone approved the code yet? */
+export async function quickConnectApproved(serverUrl: string, deviceId: string, secret: string): Promise<boolean> {
+  const state = await request<{ Authenticated: boolean }>({ serverUrl, deviceId }, '/QuickConnect/Connect', { query: { secret } })
+  return Boolean(state?.Authenticated)
+}
+
+/** Step 3 (on the TV): trade the approved secret for a normal sign-in. */
+export async function loginWithQuickConnect(serverUrl: string, deviceId: string, secret: string): Promise<Session> {
+  const conn: Conn = { serverUrl, deviceId }
+  const info = await probeServer(conn)
+  const auth = await request<AuthResult>(conn, '/Users/AuthenticateWithQuickConnect', { method: 'POST', body: { Secret: secret } })
+  return toSession(serverUrl, info, auth)
+}
+
+/** On a phone that is already signed in: approve the code a TV is showing. The TV signs in as this user. */
+export async function quickConnectApprove(c: Conn, code: string): Promise<void> {
+  try {
+    const ok = await request<boolean>(c, '/QuickConnect/Authorize', { method: 'POST', query: { code, userId: c.userId } })
+    if (ok === false) throw new ApiError('', 'http')
+  } catch (e) {
+    if (e instanceof ApiError && (e.kind === 'http' || e.kind === 'login')) {
+      throw new ApiError("That code didn't work. Check the numbers, or get a new code on the TV.", 'login', e.status)
     }
     throw e
   }
@@ -243,6 +295,12 @@ export const search = (c: Conn, term: string) =>
     },
   })
 
+/** Fresh copies of specific items (used to update the "Tonight" shelf). */
+export const getItemsByIds = (c: Conn, ids: string[]) =>
+  request<ItemsResult>(c, '/Items', {
+    query: { userId: c.userId, ids: ids.join(','), fields: LIST_FIELDS, enableImageTypes: 'Primary' },
+  })
+
 /** Poster URL. Image endpoints are public, so no token in the URL. */
 export function imageUrl(serverUrl: string, item: BaseItem, height = 360): string | null {
   const q = `fillHeight=${height}&quality=90`
@@ -259,7 +317,7 @@ export function getPlaybackInfo(
   c: Conn,
   itemId: string,
   deviceProfile: object,
-  opts: { startTicks: number; allowDirect: boolean },
+  opts: { startTicks: number; allowDirect: boolean; maxBitrate?: number },
 ) {
   return request<PlaybackInfo>(c, `/Items/${itemId}/PlaybackInfo`, {
     method: 'POST',
@@ -268,7 +326,7 @@ export function getPlaybackInfo(
       StartTimeTicks: opts.startTicks,
       IsPlayback: true,
       AutoOpenLiveStream: true,
-      MaxStreamingBitrate: 120_000_000,
+      MaxStreamingBitrate: opts.maxBitrate ?? 120_000_000,
       EnableDirectPlay: opts.allowDirect,
       EnableDirectStream: opts.allowDirect,
       EnableTranscoding: true,
